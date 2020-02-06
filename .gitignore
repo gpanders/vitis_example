@@ -1,0 +1,13 @@
+*.o
+*.xo
+*.log
+*.jou
+*.str
+*.xo.compile_summary*
+
+.Xil/
+build/
+_vimage/
+emulation/
+pl_script.sh
+start_simulation.sh

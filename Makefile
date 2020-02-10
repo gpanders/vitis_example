@@ -11,7 +11,6 @@ TARGET := sw_emu
 
 PLATFORM := $(BUILD)/platform/$(NAME).xpfm
 
-CROSS_COMPILE := aarch64-linux-gnu-
 SYSROOT := $(BUILD)/sysroot
 
 VPPFLAGS = -t $(TARGET)
@@ -32,7 +31,7 @@ all: host xclbin emconfig
 .PHONY: host
 host: $(BUILD)/$(TARGET)/host
 $(BUILD)/$(TARGET)/host: $(wildcard src/host/*.cpp src/host/*.h) $(SYSROOT)
-	$(MAKE) CROSS_COMPILE=$(CROSS_COMPILE) SYSROOT=$(realpath $(SYSROOT)) -C src/host
+	$(MAKE) SYSROOT=$(realpath $(SYSROOT)) -C src/host
 	mkdir -p $(@D)
 	cp src/host/host $@
 

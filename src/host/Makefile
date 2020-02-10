@@ -1,24 +1,24 @@
-CC := $(CROSS_COMPILE)g++
-CCFLAGS += -std=c++11 -Wall -Wpedantic -I$(XILINX_XRT)/include -I$(XILINX_VIVADO)/include
-LDFLAGS += -lOpenCL -L$(XILINX_XRT)/lib
+CC := aarch64-linux-gnu-g++
+CCFLAGS += -std=c++11 -g -Wall -Wpedantic -D__USE_XOPEN2K8 --sysroot $(SYSROOT) -I$(SYSROOT)/usr/include/xrt
+LDFLAGS += -lxilinxopencl -lpthread -lrt -lxrt_core -lgmp --sysroot $(SYSROOT)
 NAME := host
 SRCS := host.cpp
 OBJS := $(SRCS:.cpp=.o)
 
-ifneq ($(SYSROOT),)
-    CCFLAGS += --sysroot $(SYSROOT)
-    LDFLAGS += --sysroot $(SYSROOT)
-endif
-
 all: $(NAME)
 
-$(NAME): $(OBJS)
+$(NAME): $(OBJS) | check-sysroot
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-%.o: %.cpp
+%.o: %.cpp | check-sysroot
 	$(CC) -c -o $@ $< $(CCFLAGS)
 
 clean:
 	rm -rf $(NAME) $(OBJS)
+
+check-sysroot:
+    ifndef SYSROOT
+	$(error "SYSROOT is undefined. Set it as an environment variable or provide it on the commandline invocation of make")
+    endif
 
 .PHONY: all clean

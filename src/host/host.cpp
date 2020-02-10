@@ -7,45 +7,67 @@
 #define CL_HPP_TARGET_OPENCL_VERSION 120
 #include <CL/cl2.hpp>
 
-#define KERNEL "axpy"
+#define KERNEL_NAME "axpy"
 
-int read_vector(std::string const& fname, std::vector<float> &vec);
+static constexpr size_t VECTOR_SIZE = 1024;
+
+template <typename T>
+struct aligned_allocator
+{
+    using value_type = T;
+    T* allocate(std::size_t num)
+    {
+        void *ptr = nullptr;
+        if (posix_memalign(&ptr, 4096, num * sizeof(T))) {
+            throw std::bad_alloc();
+        }
+        return reinterpret_cast<T*>(ptr);
+    }
+
+    void deallocate(T *p, std::size_t num)
+    {
+        free(p);
+    }
+};
+
+int create_vector(std::vector<float, aligned_allocator<float>> &vec, size_t length);
 int read_xclbin(std::string const& fname, std::vector<char> &binary);
 
 int main(int argc, char *argv[])
 {
-    if (argc != 5) {
-        std::cout << "Usage: " << argv[0] << " <xclbin> <data_a.txt> <data_x.txt> <data_y.txt>";
+    if (argc != 2) {
+        std::cout << "Usage: " << argv[0] << " <xclbin>";
         std::cout << std::endl;
         return EXIT_FAILURE;
     }
 
     int err;
     std::vector<char> binary;
-    std::vector<float> data_a, data_x, data_y;
+    std::vector<float, aligned_allocator<float>> data_a, data_x, data_y, data_out;
 
     err = read_xclbin(argv[1], binary);
     if (err) {
         return err;
     }
 
-    err = read_vector(argv[2], data_a);
+    err = create_vector(data_a, VECTOR_SIZE);
     if (err) {
         return err;
     }
 
-    err = read_vector(argv[3], data_x);
+    err = create_vector(data_x, VECTOR_SIZE);
     if (err) {
         return err;
     }
 
-    err = read_vector(argv[4], data_y);
+    err = create_vector(data_y, VECTOR_SIZE);
     if (err) {
         return err;
     }
 
-    size_t length = data_a.size();
-    size_t size_bytes = length * sizeof(float);
+    uint32_t length = data_a.size();
+    uint32_t size_bytes = length * sizeof(float);
+    data_out.resize(length);
 
     std::vector<cl::Device> devices;
     cl::Device device;
@@ -74,16 +96,16 @@ int main(int argc, char *argv[])
     cl::Context context(device);
     cl::CommandQueue q(context, device, CL_QUEUE_PROFILING_ENABLE);
 
-    cl::Program::Binaries bins {{binary.data(), binary.size()}};
+    cl::Program::Binaries bins{{binary.data(), binary.size()}};
     devices.resize(1);
     cl::Program program(context, devices, bins);
 
-    cl::Kernel kernel(program, KERNEL);
+    cl::Kernel kernel(program, KERNEL_NAME);
 
     cl::Buffer buffer_a(context, CL_MEM_READ_ONLY|CL_MEM_USE_HOST_PTR, size_bytes, data_a.data());
     cl::Buffer buffer_x(context, CL_MEM_READ_ONLY|CL_MEM_USE_HOST_PTR, size_bytes, data_x.data());
     cl::Buffer buffer_y(context, CL_MEM_READ_ONLY|CL_MEM_USE_HOST_PTR, size_bytes, data_y.data());
-    cl::Buffer buffer_out(context, CL_MEM_WRITE_ONLY, size_bytes);
+    cl::Buffer buffer_out(context, CL_MEM_WRITE_ONLY|CL_MEM_USE_HOST_PTR, size_bytes, data_out.data());
 
     kernel.setArg(0, buffer_a);
     kernel.setArg(1, buffer_x);
@@ -91,28 +113,27 @@ int main(int argc, char *argv[])
     kernel.setArg(3, buffer_out);
     kernel.setArg(4, length);
 
-    float *result = (float *) q.enqueueMapBuffer(buffer_out, CL_TRUE, CL_MAP_READ, 0, size_bytes);
-
     q.enqueueMigrateMemObjects({buffer_a, buffer_x, buffer_y}, 0);
+    q.enqueueMigrateMemObjects({buffer_out}, CL_MIGRATE_MEM_OBJECT_CONTENT_UNDEFINED);
+    q.enqueueBarrierWithWaitList();
 
-    q.enqueueTask(kernel);
+    cl::Event event;
+    q.enqueueTask(kernel, NULL, &event);
 
-    q.enqueueMigrateMemObjects({buffer_out}, CL_MIGRATE_MEM_OBJECT_HOST);
+    std::vector<cl::Event> events{event};
+    q.enqueueMigrateMemObjects({buffer_out}, CL_MIGRATE_MEM_OBJECT_HOST, &events);
 
     q.finish();
 
     bool success = true;
     for (size_t i = 0; i < length; i++) {
         float expected = data_a[i]*data_x[i] + data_y[i];
-        if (std::fabs(expected - result[i]) >= 1e-6) {
+        if (std::fabs(expected - data_out[i]) >= 1e-6) {
             success = false;
             fprintf(stderr, "Mismatch at index %lu. Expected %f but got %f\n",
-                    i, expected, result[i]);
+                    i, expected, data_out[i]);
         }
     }
-
-    q.enqueueUnmapMemObject(buffer_out, result);
-    q.finish();
 
     if (success) {
         printf("Success!\n");
@@ -122,12 +143,11 @@ int main(int argc, char *argv[])
     return 1;
 }
 
-int read_vector(std::string const& fname, std::vector<float> &vec)
+int create_vector(std::vector<float, aligned_allocator<float>> &vec, size_t length)
 {
-    std::ifstream fil(fname);
-    float x;
-    while (fil >> x) {
-        vec.push_back(x);
+    vec.resize(length);
+    for (size_t i = 0; i < length; i++) {
+        vec[i] = i % 256;
     }
 
     return 0;

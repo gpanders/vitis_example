@@ -70,11 +70,8 @@ _vimage/emulation/.sdcard: _vimage/emulation/sd_card.manifest
 	sed -i 's!$(PWD)/$(NAME).xclbin!$(PWD)/$(BUILD)/$(TARGET)/$(NAME).xclbin!' _vimage/emulation/sd_card.manifest
 	echo '$(PWD)/xrt.ini' >> _vimage/emulation/sd_card.manifest
 	echo '$(PWD)/$(BUILD)/$(TARGET)/host' >> _vimage/emulation/sd_card.manifest
-	echo '$(PWD)/src/host/data_a.txt' >> _vimage/emulation/sd_card.manifest
-	echo '$(PWD)/src/host/data_x.txt' >> _vimage/emulation/sd_card.manifest
-	echo '$(PWD)/src/host/data_y.txt' >> _vimage/emulation/sd_card.manifest
 	echo 'export XILINX_XRT=/usr' >> _vimage/emulation/init.sh
-	echo './host $(NAME).xclbin data_a.txt data_x.txt data_y.txt' >> _vimage/emulation/init.sh
+	echo './host $(NAME).xclbin' >> _vimage/emulation/init.sh
 	@touch $@
 
 .PHONY: run

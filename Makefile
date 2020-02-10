@@ -46,7 +46,7 @@ $(BUILD)/$(TARGET)/$(NAME).xclbin: config.ini $(XOBJS)
 	v++ $(VPPFLAGS) -l -o $@ $(XOBJS)
 
 .PHONY: kernels
-kernels: $(BUILD)/$(TARGET)/$(XOBJS)
+kernels: $(XOBJS)
 $(BUILD)/$(TARGET)/kernels/%.xo: $(PLATFORM) kernels/%.c kernels/%.h
 	v++ $(VPPFLAGS) -c -I kernels/$(*D) -k $(*F) -o $@ kernels/$*.c
 
@@ -88,11 +88,11 @@ cleanhost:
 
 .PHONY: cleankernels
 cleankernels:
-	-$(RM) -r kernels/*/*.xo $(BUILD)/$(TARGET)/$(NAME).xclbin _vimage
+	-$(RM) -rf $(XOBJS) $(BUILD)/$(TARGET)/$(NAME).xclbin _vimage
 
 .PHONY: cleanall
 cleanall: clean cleanhost cleankernels
-	-$(RM) -r emulation pl_script.sh start_simulation.sh
+	-$(RM) -rf emulation pl_script.sh start_simulation.sh
 
 $(BUILD)/$(NAME).xsa:
 	vivado -mode tcl -source scripts/create_xsa.tcl -tclargs $(NAME)

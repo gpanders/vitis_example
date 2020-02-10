@@ -11,3 +11,4 @@ _vimage/
 emulation/
 pl_script.sh
 start_simulation.sh
+qemu-memory-*

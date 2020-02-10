@@ -23,7 +23,7 @@ ifneq ($(TARGET),hw)
 endif
 
 # Compiled kernel object files
-XOBJS := $(foreach obj,$(patsubst %.c,%.xo,$(wildcard kernels/*/*.c)),$(BUILD)/$(TARGET)/$(obj))
+XOBJS := $(foreach obj,$(patsubst src/%.c,%.xo,$(wildcard src/kernels/*/*.c)),$(BUILD)/$(TARGET)/$(obj))
 
 .PHONY: all
 all: host xclbin emconfig
@@ -47,8 +47,8 @@ $(BUILD)/$(TARGET)/$(NAME).xclbin: config.ini $(XOBJS)
 
 .PHONY: kernels
 kernels: $(XOBJS)
-$(BUILD)/$(TARGET)/kernels/%.xo: $(PLATFORM) kernels/%.c kernels/%.h
-	v++ $(VPPFLAGS) -c -I kernels/$(*D) -k $(*F) -o $@ kernels/$*.c
+$(BUILD)/$(TARGET)/kernels/%.xo: $(PLATFORM) src/kernels/%.c src/kernels/%.h
+	v++ $(VPPFLAGS) -c -I src/kernels/$(*D) -k $(*F) -o $@ src/kernels/$*.c
 
 .PHONY: sysroot
 sysroot: $(SYSROOT)

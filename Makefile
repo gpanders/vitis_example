@@ -113,4 +113,4 @@ petalinux/images/linux/%: petalinux/project-spec/hw-description/system.xsa
 	petalinux-build -p petalinux
 
 petalinux/project-spec/hw-description/system.xsa: $(BUILD)/$(NAME).xsa
-	petalinux-config --get-hw-description=$(realpath $(<D)) -p petalinux
+	petalinux-config --get-hw-description=$(realpath $(<D)) -p petalinux --silentconfig

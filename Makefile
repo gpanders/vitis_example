@@ -37,8 +37,8 @@ $(BUILD)/$(TARGET)/host: $(wildcard src/host/*.cpp src/host/*.h) $(SYSROOT)
 
 .PHONY: platform
 platform: $(PLATFORM)
-$(PLATFORM): $(BUILD)/$(NAME).xsa $(BUILD)/boot/image.ub $(BUILD)/boot/fsbl.elf $(BUILD)/boot/pmufw.elf $(BUILD)/boot/u-boot.elf $(BUILD)/boot/bl31.elf $(SYSROOT) pfm/linux.bif pfm/qemu/qemu_args.txt pfm/qemu/pmu_args.txt
-	xsct scripts/create_platform.tcl $< $(WORKSPACE) $(BUILD)
+$(PLATFORM): scripts/create_platform.tcl $(BUILD)/$(NAME).xsa $(BUILD)/boot/image.ub $(BUILD)/boot/fsbl.elf $(BUILD)/boot/pmufw.elf $(BUILD)/boot/u-boot.elf $(BUILD)/boot/bl31.elf $(SYSROOT) pfm/linux.bif pfm/qemu/qemu_args.txt pfm/qemu/pmu_args.txt
+	xsct $< $(BUILD)/$(NAME).xsa $(WORKSPACE) $(BUILD)
 
 .PHONY: xclbin
 xclbin: $(BUILD)/$(TARGET)/$(NAME).xclbin
@@ -94,8 +94,8 @@ cleankernels:
 cleanall: clean cleanhost cleankernels
 	-$(RM) -rf emulation pl_script.sh start_simulation.sh
 
-$(BUILD)/$(NAME).xsa:
-	vivado -mode tcl -source scripts/create_xsa.tcl -tclargs $(NAME)
+$(BUILD)/$(NAME).xsa: scripts/create_xsa.tcl
+	vivado -mode tcl -source $< -tclargs $(NAME)
 
 $(BUILD)/boot:
 	mkdir -p $@

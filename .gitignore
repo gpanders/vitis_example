@@ -3,7 +3,9 @@
 *.log
 *.jou
 *.str
-*.xo.compile_summary*
+*.csv
+*.compile_summary*
+*.run_summary
 
 .Xil/
 build/
